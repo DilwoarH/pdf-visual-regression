@@ -126,3 +126,4 @@ cython_debug/
 
 # test pdfs
 tests/test_pdfs/
+tests/test_output/
