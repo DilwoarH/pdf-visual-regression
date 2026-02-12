@@ -123,3 +123,6 @@ cython_debug/
 
 # macOS
 .DS_Store
+
+# test pdfs
+tests/test_pdfs/
