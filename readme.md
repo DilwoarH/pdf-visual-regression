@@ -44,10 +44,10 @@ python pdf_visual_diff.py <path/to/pdf1.pdf> <path/to/pdf2.pdf> [options]
 ### Example
 
 ```bash
-python pdf_visual_diff.py documents/original.pdf documents/modified.pdf --output diffs
+python pdf_visual_diff.py example-pdfs/example-working-gov-letter.pdf example-pdfs/example-broken-gov-letter.pdf
 ```
 
-If differences are found, the script will print a summary to the console and save the highlighted images in the specified output directory.
+If differences are found, the script will print a summary to the console and save the highlighted images in a timestamped output directory (e.g., `diff_output/20261202_171728_diff/`).
 
 ## Testing
 
