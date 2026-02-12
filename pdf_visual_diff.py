@@ -5,7 +5,7 @@ from PIL import Image, ImageChops
 from skimage.metrics import structural_similarity as ssim
 import os
 
-def compare_pdfs(pdf1_path, pdf2_path, output_dir):
+def compare_pdfs(pdf1_path, pdf2_path, output_dir, threshold=0.999):
     """
     Compares two PDFs page by page for visual differences.
     """
@@ -16,10 +16,12 @@ def compare_pdfs(pdf1_path, pdf2_path, output_dir):
     pdf2 = fitz.open(pdf2_path)
 
     diff_pages = []
+    has_printed_warning = False
 
     if len(pdf1) != len(pdf2):
         print(f"Warning: PDFs have different page counts. PDF1: {len(pdf1)} pages, PDF2: {len(pdf2)} pages.")
         print("Comparing up to the lower page count.")
+        has_printed_warning = True
 
     page_count = min(len(pdf1), len(pdf2))
 
@@ -27,60 +29,48 @@ def compare_pdfs(pdf1_path, pdf2_path, output_dir):
         page1 = pdf1.load_page(i)
         page2 = pdf2.load_page(i)
 
-        img1 = page1.get_pixmap()
-        img2 = page2.get_pixmap()
+        # To ensure consistent rendering, let's use a standard DPI
+        zoom = 2  # DPI = 144
+        mat = fitz.Matrix(zoom, zoom)
+        img1 = page1.get_pixmap(matrix=mat)
+        img2 = page2.get_pixmap(matrix=mat)
 
         # Convert to PIL images
         pil_img1 = Image.frombytes("RGB", [img1.width, img1.height], img1.samples)
         pil_img2 = Image.frombytes("RGB", [img2.width, img2.height], img2.samples)
 
+        if pil_img1.size != pil_img2.size:
+            # Resize images to be the same size for comparison
+            pil_img2 = pil_img2.resize(pil_img1.size, Image.LANCZOS)
+
         # Convert to numpy arrays for ssim
         np_img1 = np.array(pil_img1)
         np_img2 = np.array(pil_img2)
 
-        # Compute SSIM
-        similarity, diff_img = ssim(np_img1, np_img2, full=True, multichannel=True)
+        # Compute SSIM (channel_axis=-1 for color images, replaces deprecated multichannel parameter)
+        similarity = ssim(np_img1, np_img2, channel_axis=-1, data_range=255)
 
-        if similarity < 1.0:
+        if similarity < threshold:
             diff_pages.append(i + 1)
-            
-            # Create a visual diff image
-            diff_img = (diff_img * 255).astype("uint8")
-            diff_pil = Image.fromarray(diff_img)
-            
-            # To make differences more visible, we can create a blended image
-            # Create an image with the differences highlighted in red
-            diff_highlight = Image.new("RGB", pil_img1.size, (0, 0, 0))
-            
+
             # Use ImageChops to find the difference
             diff = ImageChops.difference(pil_img1, pil_img2)
-            
-            # To make the diff more visible, we can threshold it
-            # This will make small differences more pronounced
-            thresholded_diff = diff.point(lambda p: 255 if p > 20 else 0)
-            
-            # We need to get the bounding box of the differences
-            bbox = thresholded_diff.getbbox()
-            
-            if bbox:
-                # Create a red transparent overlay for the differences
-                overlay = Image.new("RGBA", pil_img1.size, (255, 0, 0, 0))
-                drawing_layer = Image.new("RGBA", pil_img1.size, (0,0,0,0))
-                
-                # Paste the thresholded difference onto the drawing layer
-                drawing_layer.paste((255,0,0,128), mask=thresholded_diff.convert('L'))
-                
-                # Composite the drawing layer onto the first image
-                highlighted_img = Image.alpha_composite(pil_img1.convert("RGBA"), drawing_layer)
-                
-                # Save the highlighted image
-                highlighted_img.convert("RGB").save(os.path.join(output_dir, f"diff_page_{i+1}.png"))
 
+            # Threshold to make the diff more visible
+            thresholded_diff = diff.point(lambda p: 255 if p > 20 else 0)
+
+            if thresholded_diff.getbbox():
+                drawing_layer = Image.new("RGBA", pil_img1.size, (0,0,0,0))
+                drawing_layer.paste((255,0,0,128), mask=thresholded_diff.convert('L'))
+                highlighted_img = Image.alpha_composite(pil_img1.convert("RGBA"), drawing_layer)
+                highlighted_img.convert("RGB").save(os.path.join(output_dir, f"diff_page_{i+1}.png"))
 
     pdf1.close()
     pdf2.close()
 
     if not diff_pages:
+        # If a warning was printed and no diffs were found, the identical message should still be printed
+        # for the pages that were compared.
         print("All pages are visually identical.")
     else:
         print(f"Visual differences found on pages: {', '.join(map(str, diff_pages))}")
@@ -90,9 +80,10 @@ def main():
     parser.add_argument("pdf1", help="Path to the first PDF file.")
     parser.add_argument("pdf2", help="Path to the second PDF file.")
     parser.add_argument("--output", default="diff_output", help="Directory to save difference images.")
+    parser.add_argument("--threshold", type=float, default=0.999, help="Similarity threshold for SSIM (0.0 to 1.0).")
     args = parser.parse_args()
 
-    compare_pdfs(args.pdf1, args.pdf2, args.output)
+    compare_pdfs(args.pdf1, args.pdf2, args.output, args.threshold)
 
 if __name__ == "__main__":
     main()

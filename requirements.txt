@@ -2,3 +2,4 @@ PyMuPDF
 scikit-image
 Pillow
 numpy
+reportlab

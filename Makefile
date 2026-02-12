@@ -1,10 +1,13 @@
-.PHONY: test clean
+.PHONY: install test clean
 
 # Variables
 PYTHON = python3
 
 # Default target
-all: test
+all: install
+
+install:
+	$(PYTHON) -m pip install -r requirements.txt
 
 # Target to run tests
 test: setup

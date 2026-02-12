@@ -24,10 +24,10 @@ def setup_test_files():
 
     # Create a PDF with a different text
     create_test_pdf("tests/test_pdfs/test2_different_text.pdf", "This is a different test.")
-    
-    # Create a PDF with a different number of pages
+
+    # Create a PDF with a different number of pages (but first page is identical to test1_original)
     c = canvas.Canvas("tests/test_pdfs/test3_different_pages.pdf", pagesize=letter)
-    c.drawString(100, 750, "Page 1")
+    c.drawString(100, 750, "This is a test.")
     c.showPage()
     c.drawString(100, 750, "Page 2")
     c.showPage()
