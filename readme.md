@@ -35,6 +35,20 @@ The main script is `pdf_visual_diff.py`. You can run it from the command line, p
 python pdf_visual_diff.py <path/to/pdf1.pdf> <path/to/pdf2.pdf> [options]
 ```
 
+### Example
+
+#### Reference PDF
+
+<img src="./example-pdfs/example-images/working.png" />
+
+#### Generated PDF
+
+<img src="./example-pdfs/example-images/broken.png" />
+
+#### Visual Regression Results
+
+<img src="./example-pdfs/example-images/diff.png" />
+
 ### Arguments
 
 -   `pdf1`: The path to the first PDF file (e.g., the original or expected version).
